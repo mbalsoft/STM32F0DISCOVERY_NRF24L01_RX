@@ -42,6 +42,8 @@
 
 /* USER CODE BEGIN Includes */
 
+#include "tm2_stm32_nrf24l01.h"
+
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -49,6 +51,8 @@ SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+
+NRF24L01_config_TypeDef nrf_rx_cfg;
 
 /* USER CODE END PV */
 
@@ -75,6 +79,13 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 
+	  /* Data received and data for send */
+	  uint8_t dataOut[32], dataIn[32];
+	  //uint8_t cnt = 0;
+
+	  /* NRF transmission status */
+	  TM_NRF24L01_Transmit_Status_t transmissionStatus;
+
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -98,13 +109,80 @@ int main(void)
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
 
+
+  nrf_rx_cfg.CE_pin          = GPIO_PIN_1;
+  nrf_rx_cfg.CE_port         = GPIOA;
+  nrf_rx_cfg.CSN_pin         = GPIO_PIN_2;
+  nrf_rx_cfg.CSN_port        = GPIOA;
+  nrf_rx_cfg.SPI             = &hspi1;
+  nrf_rx_cfg.radio_channel   = 15;
+  nrf_rx_cfg.baud_rate       = TM_NRF24L01_DataRate_1M;
+  nrf_rx_cfg.payload_len     = 1;
+  nrf_rx_cfg.crc_len         = 1;
+  nrf_rx_cfg.output_power    = TM_NRF24L01_OutputPower_0dBm;
+  nrf_rx_cfg.rx_address[ 0 ] = 0x7E;
+  nrf_rx_cfg.rx_address[ 1 ] = 0x7E;
+  nrf_rx_cfg.rx_address[ 2 ] = 0x7E;
+  nrf_rx_cfg.rx_address[ 3 ] = 0x7E;
+  nrf_rx_cfg.rx_address[ 4 ] = 0x7E;
+  nrf_rx_cfg.tx_address[ 0 ] = 0xE7;
+  nrf_rx_cfg.tx_address[ 1 ] = 0xE7;
+  nrf_rx_cfg.tx_address[ 2 ] = 0xE7;
+  nrf_rx_cfg.tx_address[ 3 ] = 0xE7;
+  nrf_rx_cfg.tx_address[ 4 ] = 0xE7;
+
+  //turn ON LED's
+  HAL_GPIO_WritePin( LD3_GPIO_Port, LD3_Pin, GPIO_PIN_RESET );
+  HAL_GPIO_WritePin( LD4_GPIO_Port, LD4_Pin, GPIO_PIN_RESET );
+  tm2_NRF24L01_Init( &nrf_rx_cfg );
+  HAL_Delay( 2000 );
+  tm2_NRF24L01_Clear_Interrupts( &nrf_rx_cfg );
+  HAL_Delay( 100 );
+  //turn off LED's
+  HAL_GPIO_WritePin( LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET );
+  HAL_GPIO_WritePin( LD4_GPIO_Port, LD4_Pin, GPIO_PIN_SET );
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  HAL_Delay( 100 );
+	  if( tm2_NRF24L01_DataReady( &nrf_rx_cfg )) {
+		/* Get data from NRF24L01+ */
+		tm2_NRF24L01_GetData( &nrf_rx_cfg, dataIn );
+		if( dataIn[ 0 ] == 'B' ) {
+			HAL_GPIO_WritePin( LD4_GPIO_Port, LD4_Pin, GPIO_PIN_RESET );
+		}
+		else if( dataIn[ 0 ] == 'b' ) {
+			HAL_GPIO_WritePin( LD4_GPIO_Port, LD4_Pin, GPIO_PIN_SET );
+		}
+		else if( dataIn[ 0 ] == 'G' ) {
+			HAL_GPIO_WritePin( LD3_GPIO_Port, LD3_Pin, GPIO_PIN_RESET );
+		}
+		else if( dataIn[ 0 ] == 'g' ) {
+			HAL_GPIO_WritePin( LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET );
+		}
+		tm2_NRF24L01_Transmit( &nrf_rx_cfg, dataIn );
+		/* Wait for data to be sent */
+		do {
+		  /* Get transmission status */
+		  transmissionStatus = tm2_NRF24L01_GetTransmissionStatus( &nrf_rx_cfg );
+		} while( transmissionStatus == TM_NRF24L01_Transmit_Status_Sending );
+		tm2_NRF24L01_PowerUpRx( &nrf_rx_cfg );
+	  }
 
+	  if( HAL_GPIO_ReadPin( B1_GPIO_Port, B1_Pin ) == GPIO_PIN_SET ) {
+		  dataOut[ 0 ] = 'K';
+		  tm2_NRF24L01_Transmit( &nrf_rx_cfg, dataOut );
+		  /* Wait for data to be sent */
+		  do {
+			  /* Get transmission status */
+			  transmissionStatus = tm2_NRF24L01_GetTransmissionStatus( &nrf_rx_cfg );
+		  } while( transmissionStatus == TM_NRF24L01_Transmit_Status_Sending );
+		  tm2_NRF24L01_PowerUpRx( &nrf_rx_cfg );
+	  }
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
