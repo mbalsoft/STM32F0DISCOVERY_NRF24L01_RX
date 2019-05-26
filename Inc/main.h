@@ -51,6 +51,10 @@
 
 #define B1_Pin GPIO_PIN_0
 #define B1_GPIO_Port GPIOA
+#define SPI1_CE_Pin GPIO_PIN_1
+#define SPI1_CE_GPIO_Port GPIOA
+#define SPI1_CSN_Pin GPIO_PIN_2
+#define SPI1_CSN_GPIO_Port GPIOA
 #define LD4_Pin GPIO_PIN_8
 #define LD4_GPIO_Port GPIOC
 #define LD3_Pin GPIO_PIN_9
